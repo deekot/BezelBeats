@@ -1,0 +1,59 @@
+name: Build Mac App
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Swift
+      run: swift --version
+
+    - name: Build executable
+      run: swift build -c release
+
+    - name: Create App Bundle
+      run: |
+        # Create the folder structure
+        mkdir -p BezelBeats.app/Contents/MacOS
+        mkdir -p BezelBeats.app/Contents/Resources
+        
+        # Copy the binary executable
+        cp .build/release/BezelBeats BezelBeats.app/Contents/MacOS/
+        
+        # Create the Info.plist (Permissions & Settings)
+        cat <<EOF > BezelBeats.app/Contents/Info.plist
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>BezelBeats</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.yourname.BezelBeats</string>
+            <key>CFBundleName</key>
+            <string>BezelBeats</string>
+            <key>LSUIElement</key>
+            <true/>
+            <key>NSMicrophoneUsageDescription</key>
+            <string>Need microphone access to visualize audio.</string>
+        </dict>
+        </plist>
+        EOF
+
+    - name: Remove Quarantine & Zip
+      run: |
+        xattr -cr BezelBeats.app
+        zip -r BezelBeats.app.zip BezelBeats.app
+
+    - name: Upload App
+      uses: actions/upload-artifact@v4
+      with:
+        name: BezelBeats-App
+        path: BezelBeats.app.zip
